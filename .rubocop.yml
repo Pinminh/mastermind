@@ -12,4 +12,4 @@ AllCops:
   NewCops: enable
 
 Style/FrozenStringLiteralComment:
-EnforcedStyle: never
+  EnforcedStyle: never
