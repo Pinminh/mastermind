@@ -41,9 +41,9 @@ class MastermindCLI
   def print_available_colors
     @game.row.number_of_colors.times do |index|
       clr_symb = CLR_CODE[index]
-      clr_title = Rainbow("#{clr_symb} #{PEG_SYMBOL}").color(clr_symb)
+      clr_title = Rainbow("#{clr_symb} #{SLOT_SYMBOL}").color(clr_symb)
 
-      indent = '  '
+      indent = '      '
       indent = "\t" if (index % ROW_COLORS).zero?
       print indent + clr_title.to_s
       print "\n" if index % ROW_COLORS == ROW_COLORS - 1
@@ -80,7 +80,13 @@ class MastermindCLI
   def ask_for_guess
     print 'Enter your guess: '
     $stdout.flush
-    gets.chomp.gsub(' ', '').chars.map { |char| CLR_CHAR.find_index(char) }
+    guess = gets.chomp.gsub(' ', '').chars
+                .map { |char| CLR_CHAR.find_index(char.downcase) }
+    raise 'invalid width' if guess.length != @game.row.width
+    raise 'invalid color' if guess.include?(nil)
+    raise 'invalid color' if guess.any? { |color| color >= @game.row.number_of_colors }
+
+    guess
   end
 
   def print_guess(guess)
@@ -124,8 +130,19 @@ class MastermindCLI
     @feedbacks.clear
   end
 
-  def process_guess
+  def validate_guess
     guess = ask_for_guess
+  rescue RuntimeError => e
+    perr = Rainbow(' ! <Error>').color(:crimson)
+    puts "#{perr} Your guess must be #{@game.row.width} wide!" if e.to_s == 'invalid width'
+    puts "#{perr} Only colors listed above are valid!" if e.to_s == 'invalid color'
+    retry
+  else
+    guess
+  end
+
+  def process_guess
+    guess = validate_guess
     @game.put_whole_guess(guess)
 
     @guesses.push(guess)
@@ -138,9 +155,26 @@ class MastermindCLI
       print_guide_on_color
 
       process_guess
+
       clear_terminal
       break if @game.round_end?
     end
+  end
+
+  def conclude_round
+    puts "\n\n"
+    win_rawr = Rainbow("\tGeez... You won!").color(:gold)
+    lose_rawr = Rainbow("\tAhha... Loser!").color(:red)
+    result = @game.row.correct_guess?
+    puts result ? win_rawr : lose_rawr
+    puts
+    return if result
+
+    puts Rainbow(' - The real answer is...').color(:gold)
+    print_guess(@game.row.truth_code)
+    puts
+    print_guess(@game.row.truth_code)
+    puts
   end
 
   def play_once
@@ -148,7 +182,7 @@ class MastermindCLI
     loop_play_round
 
     print_history
-    puts @game.row.correct_guess? ? 'Haiz... You won' : 'Ah ha... Loser'
+    conclude_round
     reset_history
   end
 end

@@ -11,6 +11,10 @@ class MastermindRow
     @feedback = Array.new(@width)
   end
 
+  def truth_code
+    @truth_code.map(&:clone)
+  end
+
   def reconfigure(width = 4, number_of_colors = 6)
     return false unless width.is_a?(Integer) && number_of_colors.is_a?(Integer)
     return false unless width.positive? && number_of_colors.positive?
@@ -98,7 +102,7 @@ class MastermindRow
     return false if @guess.include?(nil)
 
     @feedback.map! { nil }
-    truth_code = @truth_code.map(&:clone)
+    truth_code = self.truth_code
 
     update_absolute_feedback(truth_code)
     update_relative_feedback(truth_code)
