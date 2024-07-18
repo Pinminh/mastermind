@@ -1,158 +1,80 @@
-require 'rainbow/refinement'
 require_relative 'mastermind_game'
+require_relative 'mastermind_message'
 
 # Manage interactions through terminal with the rows
 class MastermindCLI
+  include MastermindMessage
+
   CLR_CODE = %i[red green blue yellow cyan white
                 tomato orange magenta aqua lime violet].freeze
   CLR_CHAR = %w[r g b y c w t o m a l v].freeze
-  SLOT_SYMBOL = "\u25A0".freeze
-  PEG_SYMBOL = "\u2022".freeze
   ROW_COLORS = 6
 
-  def initialize(game)
-    raise 'wrong type of game object' unless game.is_a?(MastermindGame)
-
+  def initialize(game = nil)
+    game = MastermindGame.new unless game.is_a?(MastermindGame)
     @game = game
-    @game.random_code
 
-    @guesses = []
-    @feedbacks = []
+    @guess_hist = []
+    @pegs_hist = []
   end
 
   def clear_terminal
     system('clear') || system('cls')
   end
 
-  def print_guide_on_peg
-    gray_peg_title = Rainbow("Gray pegs #{PEG_SYMBOL}").darkslategray
-    white_peg_title = Rainbow("White pegs #{PEG_SYMBOL}").white
-    orange_peg_title = Rainbow("Orange pegs #{PEG_SYMBOL}").orange
-
-    puts ' - After each guess, there is a row of small pegs whose color ' \
-         'indicates how good your guess is:'
-    puts "    1. #{gray_peg_title} means that one of your colors isn't correct."
-    puts "    2. #{white_peg_title} means that one of your colors is correct, " \
-         "though its position isn't."
-    puts "    3. #{orange_peg_title} means that one of your colors is correct,  " \
-         'so is its position.'
-  end
-
-  def print_available_colors
-    @game.row.number_of_colors.times do |index|
-      clr_symb = CLR_CODE[index]
-      clr_title = Rainbow("#{clr_symb} #{SLOT_SYMBOL}").color(clr_symb)
-
-      indent = '      '
-      indent = "\t" if (index % ROW_COLORS).zero?
-      print indent + clr_title.to_s
-      print "\n" if index % ROW_COLORS == ROW_COLORS - 1
-    end
-  end
-
-  def print_guide_on_color
-    puts " - You must find #{@game.row.width} colors, each color is chosen " \
-         "from these #{@game.row.number_of_colors} choices of colors, namely:"
-    print_available_colors
-    puts ' - You can choose one color multiple times for different slots.'
-  end
-
-  def print_guide_on_guess
-    print_guide_on_color
-    puts ' - For each of these colors, you should write your guess with their ' \
-         "first alphabet character.\nFor example, 'rgbcwy' means 'red-green-" \
-         'blue-cyan-white-yellow\'.'
-  end
-
   def print_guide
     clear_terminal
-    puts " - You need to guess correctly #{@game.row.width} colors in a row."
-
-    print_guide_on_peg
-    print_guide_on_guess
-    $stdout.flush
-
-    puts "\n\nPress Enter to continue..."
+    puts guide_text(@game.row.width, @game.row.number_of_colors)
     gets
     clear_terminal
   end
 
-  def ask_for_guess
-    print 'Enter your guess: '
-    $stdout.flush
-    guess = gets.chomp.gsub(' ', '').chars
-                .map { |char| CLR_CHAR.find_index(char.downcase) }
-    raise 'invalid width' if guess.length != @game.row.width
-    raise 'invalid color' if guess.include?(nil)
-    raise 'invalid color' if guess.any? { |color| color >= @game.row.number_of_colors }
+  def cut_guess(guess)
+    guess.map! { |char| CLR_CHAR.find_index(char.downcase) }
 
+    raise 'invalid width' unless guess.length == @game.row.width
+    raise 'invalid color' unless @game.row.accept_guess?(guess)
+  end
+
+  def ask_for_guess
+    print input_prompt_text
+    guess = gets.chomp.gsub(' ', '').chars
+    cut_guess(guess)
     guess
   end
 
-  def print_guess(guess)
-    print "\t"
-    guess.each do |index|
-      color_symb = CLR_CODE[index]
-      print Rainbow(SLOT_SYMBOL).color(color_symb)
-      print ' '
-      print Rainbow(SLOT_SYMBOL).color(color_symb)
-      print '   '
-    end
-    print '  '
-  end
-
-  def print_feedback(feedback)
-    feedback.each do |color|
-      if color.nil?
-        print Rainbow(PEG_SYMBOL).darkslategray
-        next
-      end
-      print Rainbow(PEG_SYMBOL).white if color.zero?
-      print Rainbow(PEG_SYMBOL).orange if color == 1
-    end
-    print "\n"
-  end
-
-  def print_history
-    @guesses.each_with_index do |guess, index|
-      print "\n"
-      print_guess(guess)
-      print_feedback(@feedbacks[index])
-      print_guess(guess)
-      print "\n"
-    end
-    $stdout.flush
+  def interpret_pegs
+    pegs = @game.pegs
+    colored = pegs[:colored]
+    white = pegs[:white]
+    gray = @game.row.width - colored - white
+    Array.new(colored, 1) + Array.new(white, 0) + Array.new(gray, nil)
   end
 
   def reset_history
     @game.reset_round
-    @guesses.clear
-    @feedbacks.clear
-  end
-
-  def validate_guess
-    guess = ask_for_guess
-  rescue RuntimeError => e
-    perr = Rainbow(' ! <Error>').color(:crimson)
-    puts "#{perr} Your guess must be #{@game.row.width} wide!" if e.to_s == 'invalid width'
-    puts "#{perr} Only colors listed above are valid!" if e.to_s == 'invalid color'
-    retry
-  else
-    guess
+    @guess_hist.clear
+    @pegs_hist.clear
   end
 
   def process_guess
-    guess = validate_guess
-    @game.put_whole_guess(guess)
+    guess = ask_for_guess
+  rescue RuntimeError => e
+    puts error_text(e, @game.row.width)
+    retry
+  else
+    @game.row.put_guess(guess)
+    @game.update_after_guess
 
-    @guesses.push(guess)
-    @feedbacks.push(@game.feedback)
+    @guess_hist.push(guess)
+    @pegs_hist.push(interpret_pegs)
   end
 
   def loop_play_round
     loop do
-      print_history
-      print_guide_on_color
+      print history_text(@guess_hist, @pegs_hist)
+      print colors_guide_text(@game.row.width, @game.row.number_of_colors)
+      print input_guide_text
 
       process_guess
 
@@ -162,18 +84,9 @@ class MastermindCLI
   end
 
   def conclude_round
-    puts "\n\n"
-    win_rawr = Rainbow("\tGeez... You won!").color(:gold)
-    lose_rawr = Rainbow("\tAhha... Loser!").color(:red)
-    result = @game.row.correct_guess?
-    puts result ? win_rawr : lose_rawr
-    puts
-    return if result
-
-    puts Rainbow(' - The real answer is...').color(:gold)
-    print_guess(@game.row.truth_code)
-    puts
-    print_guess(@game.row.truth_code)
+    puts "\n"
+    puts result_text(@game.win?)
+    puts right_answer_text(@game.bot.code) unless @game.win?
     puts
   end
 
@@ -181,7 +94,7 @@ class MastermindCLI
     print_guide
     loop_play_round
 
-    print_history
+    print history_text(@guess_hist, @pegs_hist)
     conclude_round
     reset_history
   end
