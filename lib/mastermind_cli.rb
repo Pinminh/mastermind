@@ -1,5 +1,6 @@
 require_relative 'mastermind_game'
 require_relative 'mastermind_message'
+require_relative 'mastermind_row'
 
 # Manage interactions through terminal with the rows
 class MastermindCLI
@@ -141,11 +142,57 @@ class MastermindCLI
     puts
   end
 
-  def process_configuration
+  def ask_for_width
+    width = 0
+
+    loop do
+      print input_width_text(MastermindRow::MAX_WIDTH)
+      width = gets.chomp.gsub(' ', '').to_i
+      break if MastermindRow.accept_width?(width)
+    end
+
+    width
+  end
+
+  def ask_for_colors
+    number_of_colors = 0
+
+    loop do
+      print input_max_colors_text(MastermindRow::MAX_COLOR)
+      number_of_colors = gets.chomp.gsub(' ', '').to_i
+      break if MastermindRow.accept_max_color?(number_of_colors)
+    end
+
+    number_of_colors
+  end
+
+  def process_row_config
+    width = ask_for_width
+    number_of_colors = ask_for_colors
+
+    @game.row.reconfigure(width, number_of_colors)
+  end
+
+  def process_turns_config
+    max_turns = 0
+
+    loop do
+      print input_turns_text(MastermindGame::MAX_TURNS)
+      max_turns = gets.chomp.gsub(' ', '').to_i
+      break if MastermindGame.accept_turns?(max_turns)
+    end
+
+    @game.modify_turns(max_turns)
+  end
+
+  def process_config
+    process_row_config
+    process_turns_config
+    @game.reset_round
   end
 
   def play_once
-    process_configuration
+    process_config
 
     clear_terminal
     print_guide

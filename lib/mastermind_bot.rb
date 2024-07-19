@@ -7,12 +7,10 @@ class MastermindBot
 
   def initialize(game)
     @guesser = false
-
     @game = game
 
-    @code = Array.new(@game.row.width)
     @prng = Random.new
-    generate_code
+    @code = generate_code
 
     @all_possible_codes = Enumerator.new do |yielder|
       (0...@game.row.number_of_colors)
@@ -42,6 +40,7 @@ class MastermindBot
   def generate_code
     return @code if guesser?
 
+    @code = Array.new(@game.row.width)
     @code.each_with_index do |_, index|
       @code[index] = @prng.rand(@game.row.number_of_colors)
     end

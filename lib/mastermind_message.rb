@@ -9,8 +9,23 @@ module MastermindMessage
   CLR_CHAR = %w[r g d y c w t o m].freeze
   ROW_COLS = 6
 
+  def input_width_text(max_width)
+    text = " - Enter number of color slots (from 1 to #{max_width} inclusively): "
+    Rainbow(text).gold
+  end
+
+  def input_max_colors_text(max_colors)
+    text = " - Enter number of color (from 1 to #{max_colors} inclusively): "
+    Rainbow(text).gold
+  end
+
+  def input_turns_text(max_turns)
+    text = " - Enter number of guess turns (from 1 to #{max_turns} inclusively): "
+    Rainbow(text).gold
+  end
+
   def role_guide_text
-    'In this game, you can play as guesser or as code creator. ' \
+    ' - In this game, you can play as guesser or as code creator. ' \
       'In the latter case, game bot will be the guesser instead.'
   end
 
@@ -135,7 +150,7 @@ module MastermindMessage
       lose_text = Rainbow('<! Congratulation! Bot lose !>').lime
     end
 
-    "\t <#{result ? win_text : lose_text}>\n"
+    "\t<#{result ? win_text : lose_text}>\n"
   end
 
   def right_answer_text(code)

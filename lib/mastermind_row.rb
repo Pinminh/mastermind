@@ -6,8 +6,8 @@ class MastermindRow
   attr_reader :width, :number_of_colors
 
   def initialize(width = 4, number_of_colors = 6)
-    width = 4 unless MastermindRow.accept_width?(width)
-    number_of_colors = 6 unless MastermindRow.accept_max_color?(number_of_colors)
+    width = 4 unless self.class.accept_width?(width)
+    number_of_colors = 6 unless self.class.accept_max_color?(number_of_colors)
 
     @width = width
     @number_of_colors = number_of_colors
@@ -56,10 +56,10 @@ class MastermindRow
   end
 
   def reconfigure(width = 4, number_of_colors = 6)
-    return false unless accept_width?(width)
-    return false unless accept_max_color?(number_of_colors)
+    return false unless self.class.accept_width?(width)
+    return false unless self.class.accept_max_color?(number_of_colors)
 
-    @guess = Array.new(@width) if width != @width || number_of_colors != @number_of_colors
+    @guess = Array.new(width) if width != @width || number_of_colors != @number_of_colors
 
     @width = width
     @number_of_colors = number_of_colors

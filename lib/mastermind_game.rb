@@ -15,7 +15,7 @@ class MastermindGame
 
     @pegs = { colored: 0, white: 0 }
 
-    max_turns = 8 unless accept_turns?(max_turns)
+    max_turns = 8 unless self.class.accept_turns?(max_turns)
     @max_turns = max_turns
 
     @played_turns = 0
@@ -26,7 +26,7 @@ class MastermindGame
     @pegs.clone
   end
 
-  def accept_turns?(turns)
+  def self.accept_turns?(turns)
     return false unless turns.is_a?(Integer) && turns.positive?
 
     turns <= MAX_TURNS
@@ -40,7 +40,7 @@ class MastermindGame
   end
 
   def modify_turns(new_turns)
-    return false unless accept_turns?(new_turns)
+    return false unless self.class.accept_turns?(new_turns)
 
     @max_turns = new_turns
     true
@@ -117,6 +117,7 @@ class MastermindGame
   def reset_round
     @played_turns = 0
     @row.reset_guess
+    @bot.reset_guess
     @bot.generate_code
   end
 
