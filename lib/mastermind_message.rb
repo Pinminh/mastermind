@@ -30,7 +30,7 @@ module MastermindMessage
   end
 
   def input_role_prompt_text
-    role_text = ' ? Do you want to be code creator (let the bot guess)? ' \
+    role_text = ' <?> Do you want to be code creator (let the bot guess)? ' \
                 'Type yes (y) or no (n): '
     Rainbow(role_text).gold
   end
@@ -91,11 +91,11 @@ module MastermindMessage
   end
 
   def input_code_prompt_text
-    Rainbow(' ? Type your created code here: ').gold
+    Rainbow(' <?> Type your created code here: ').gold
   end
 
   def input_prompt_text
-    Rainbow(' ? Type your guess here: ').gold
+    Rainbow(' <?> Type your guess here: ').gold
   end
 
   def guess_text(guess)
@@ -106,6 +106,10 @@ module MastermindMessage
       row += "#{Rainbow(SLOT_SYMBOL).color(color_symb)}   "
     end
     row += '  '
+  end
+
+  def turn_text(turn, max_turns)
+    "<#{turn}/#{Rainbow(max_turns).gold}>"
   end
 
   def pegs_text(interpreted_pegs)
@@ -129,7 +133,7 @@ module MastermindMessage
   end
 
   def error_text(error, width)
-    perr = Rainbow(' ! <Error>').color(:crimson)
+    perr = Rainbow(' <!> <Error>').color(:crimson)
 
     case error.to_s
     when 'invalid width'
@@ -146,16 +150,27 @@ module MastermindMessage
     lose_text = Rainbow('<! Learn more! You lose !>').crimson
 
     if bot_mode
-      win_text = Rainbow('<! Bot beat you! Bot win !>').crimson
-      lose_text = Rainbow('<! Congratulation! Bot lose !>').lime
+      win_text = Rainbow('<! Congratulation! Bot lose !>').lime
+      lose_text = Rainbow('<! Bot beat you! Bot win !>').crimson
     end
 
     "\t<#{result ? win_text : lose_text}>\n"
   end
 
   def right_answer_text(code)
-    prompt = Rainbow(' ! The real answer is here...').gold
+    prompt = Rainbow(' <!> The real answer is here...').gold
     half_row = guess_text(code)
     "\n#{prompt}\n\n#{half_row}\n#{half_row}"
+  end
+
+  def input_exit_text
+    Rainbow(' <?> Do you want to exit game? Type yes (y) or no (n): ').gold
+  end
+
+  def score_text(score, rounds)
+    notify = Rainbow('<!>').lime
+    score_text = Rainbow(score).lime
+    round_text = Rainbow(rounds).gold
+    "\n #{notify} You've scored #{score_text} out of #{round_text} matches\n"
   end
 end

@@ -33,8 +33,8 @@ class MastermindBot
     @guesser
   end
 
-  def toggle_bot
-    @guesser = !@guesser
+  def toggle_bot(turn_on = true)
+    @guesser = turn_on
   end
 
   def generate_code

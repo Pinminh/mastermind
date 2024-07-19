@@ -104,12 +104,14 @@ class MastermindGame
   end
 
   def win?
-    @bot.correct_guess?(@row.guess)
+    correct_guess = @bot.correct_guess?(@row.guess)
+
+    @bot.guesser? ? !correct_guess : correct_guess
   end
 
   def round_end?
     return true if @played_turns >= @max_turns
-    return true if win?
+    return true if @bot.correct_guess?(@row.guess)
 
     false
   end
@@ -125,7 +127,12 @@ class MastermindGame
     @player_score += 1
   end
 
-  def play_cli
-    @cli.play_once
+  def reset_score
+    @player_score = 0
+  end
+
+  def play_cli(loop: true)
+    @cli.play_once unless loop
+    @cli.play_loop if loop
   end
 end

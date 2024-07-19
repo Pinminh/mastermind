@@ -32,16 +32,23 @@ class MastermindCLI
     raise 'invalid color' unless @game.row.accept_guess?(guess)
   end
 
+  def yes_no_answer?(response)
+    return false unless response.is_a?(String)
+
+    dummy = response.clone.slice(0, 3)
+    %(y n yes no).include?(dummy)
+  end
+
   def ask_for_role
     puts role_guide_text
     response = ''
     loop do
       print input_role_prompt_text
       response = gets.chomp.gsub(' ', '').downcase.slice(0, 3)
-      break if %w[y n].include?(response[0]) || %w[yes no].include?(response)
+      break if yes_no_answer?(response)
     end
 
-    @game.bot.toggle_bot if %w[y yes].include?(response)
+    @game.bot.toggle_bot(%w[y yes].include?(response))
     nil
   end
 
@@ -56,6 +63,7 @@ class MastermindCLI
   def process_role
     ask_for_role
     clear_terminal
+
     return unless @game.bot.guesser?
 
     puts colors_guide_text(@game.row.width, @game.row.number_of_colors)
@@ -121,27 +129,6 @@ class MastermindCLI
     process_bot_guess if @game.bot.guesser?
   end
 
-  def loop_play_round
-    loop do
-      print history_text(@guess_hist, @pegs_hist)
-      puts colors_guide_text(@game.row.width, @game.row.number_of_colors)
-      print input_guide_text
-
-      process_game
-
-      clear_terminal
-      $stdout.flush
-      break if @game.round_end?
-    end
-  end
-
-  def conclude_round
-    puts "\n"
-    puts result_text(@game.win?, @game.bot.guesser?)
-    puts right_answer_text(@game.bot.code) unless @game.win?
-    puts
-  end
-
   def ask_for_width
     width = 0
 
@@ -191,9 +178,48 @@ class MastermindCLI
     @game.reset_round
   end
 
-  def play_once
-    process_config
+  def ask_for_exit
+    exit = ''
+    loop do
+      print input_exit_text
+      exit = gets.chomp.gsub(' ', '').slice(0, 3).downcase
+      break if yes_no_answer?(exit)
+    end
+    %(y yes).include?(exit)
+  end
 
+  def display_score(total_rounds)
+    puts score_text(@game.player_score, total_rounds)
+  end
+
+  def loop_play_round
+    loop do
+      print history_text(@guess_hist, @pegs_hist)
+      puts colors_guide_text(@game.row.width, @game.row.number_of_colors)
+      print input_guide_text
+
+      process_game
+
+      clear_terminal
+      $stdout.flush
+      break if @game.round_end?
+    end
+  end
+
+  def conclude_round
+    puts "\n"
+    has_won = @game.win?
+    correct_guess = @game.bot.correct_guess?(@game.row.guess)
+
+    puts result_text(has_won, @game.bot.guesser?)
+
+    puts right_answer_text(@game.bot.code) unless correct_guess
+    @game.add_score if has_won
+
+    puts
+  end
+
+  def play_once
     clear_terminal
     print_guide
     process_role
@@ -203,5 +229,18 @@ class MastermindCLI
     print history_text(@guess_hist, @pegs_hist)
     conclude_round
     reset_history
+    @game.reset_round
+  end
+
+  def play_loop
+    process_config
+
+    total_rounds = 0
+    loop do
+      total_rounds += 1
+      play_once
+      display_score(total_rounds)
+      break if ask_for_exit
+    end
   end
 end
