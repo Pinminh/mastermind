@@ -5,9 +5,7 @@ require_relative 'mastermind_message'
 class MastermindCLI
   include MastermindMessage
 
-  CLR_CODE = %i[red green darkblue yellow cyan white
-                tomato orange magenta].freeze
-  CLR_CHAR = %w[r g b y c w t o m].freeze
+  CLR_CHAR = MastermindMessage::CLR_CHAR
   ROW_COLORS = 6
 
   def initialize(game = nil)

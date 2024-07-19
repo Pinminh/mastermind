@@ -5,8 +5,8 @@ module MastermindMessage
   SLOT_SYMBOL = "\u25A0".freeze
   PEG_SYMBOL = "\u2022".freeze
 
-  COLORS = %i[red green blue yellow cyan white tomato orange magenta].freeze
-  CLR_CHAR = %w[r g b y c w t o m].freeze
+  COLORS = %i[red green darkblue yellow cyan white tomato orange magenta].freeze
+  CLR_CHAR = %w[r g d y c w t o m].freeze
   ROW_COLS = 6
 
   def role_guide_text
@@ -127,15 +127,15 @@ module MastermindMessage
   end
 
   def result_text(result, bot_mode)
-    win_text = Rainbow("\tCongratulation! You win!\n").lime
-    lose_text = Rainbow("\tLearn more! You lose!\n").red
+    win_text = Rainbow('<!Congratulation! You win !>').lime
+    lose_text = Rainbow('<! Learn more! You lose !>').crimson
 
     if bot_mode
-      win_text = Rainbow("\tBot beat you! Bot win!\n").red
-      lose_text = Rainbow("\tCongratulation! Bot lose!\n").lime
+      win_text = Rainbow('<! Bot beat you! Bot win !>').crimson
+      lose_text = Rainbow('<! Congratulation! Bot lose !>').lime
     end
 
-    result ? win_text : lose_text
+    "\t <#{result ? win_text : lose_text}>\n"
   end
 
   def right_answer_text(code)
