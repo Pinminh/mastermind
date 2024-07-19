@@ -5,10 +5,20 @@ module MastermindMessage
   SLOT_SYMBOL = "\u25A0".freeze
   PEG_SYMBOL = "\u2022".freeze
 
-  COLORS = %i[red green blue yellow cyan white
-              tomato orange magenta aqua lime violet].freeze
-  CLR_CHAR = %w[r g b y c w t o m a l v].freeze
-  COLORS_PER_ROW = 6
+  COLORS = %i[red green blue yellow cyan white tomato orange magenta].freeze
+  CLR_CHAR = %w[r g b y c w t o m].freeze
+  ROW_COLS = 6
+
+  def role_guide_text
+    'In this game, you can play as guesser or as code creator. ' \
+      'In the latter case, game bot will be the guesser instead.'
+  end
+
+  def input_role_prompt_text
+    role_text = ' ? Do you want to be code creator (let the bot guess)? ' \
+                'Type yes (y) or no (n): '
+    Rainbow(role_text).gold
+  end
 
   def pegs_guide_text
     gray_head   = Rainbow("1. Gray pegs #{PEG_SYMBOL}").darkslategray
@@ -33,12 +43,13 @@ module MastermindMessage
       color_tag = Rainbow("#{color_symbol} #{SLOT_SYMBOL}").color(color_symbol)
 
       indent = '      '
-      indent = "\t" if (index % COLORS_PER_ROW).zero?
+      indent = "\t" if (index % ROW_COLS).zero?
 
       available_colors += indent + color_tag.to_s
-      available_colors += "\n" if index % COLORS_PER_ROW == COLORS_PER_ROW - 1
+      available_colors += "\n" if index % ROW_COLS == ROW_COLS - 1
     end
 
+    available_colors += "\n" if (number_of_colors - 1) % ROW_COLS == ROW_COLS - 1
     available_colors
   end
 
@@ -51,7 +62,7 @@ module MastermindMessage
   def colors_guide_text(width, number_of_colors)
     general = " - You must find #{width} colors, each color is chosen " \
               "from these #{number_of_colors} choices of colors, namely:\n"
-    bonus = " - You can choose one color multiple times for different slots.\n"
+    bonus = "\n - You can choose one color multiple times for different slots.\n"
     general + available_colors_text(number_of_colors) + bonus
   end
 
@@ -60,13 +71,16 @@ module MastermindMessage
     pegs = pegs_guide_text
     colors = colors_guide_text(width, number_of_colors)
     input = input_guide_text
-    navigation = "\n\nPress Enter to continue...\n"
 
-    goal + pegs + colors + input + navigation
+    "#{goal + pegs + colors}\n#{input}\n"
+  end
+
+  def input_code_prompt_text
+    Rainbow(' ? Type your created code here: ').gold
   end
 
   def input_prompt_text
-    'Type your guess here: '
+    Rainbow(' ? Type your guess here: ').gold
   end
 
   def guess_text(guess)
@@ -112,15 +126,20 @@ module MastermindMessage
     end
   end
 
-  def result_text(result)
-    win_text = Rainbow("\tGeez... You won!\n").color(:gold)
-    lose_text = Rainbow("\tAhha... Loser!\n").color(:red)
+  def result_text(result, bot_mode)
+    win_text = Rainbow("\tCongratulation! You win!\n").lime
+    lose_text = Rainbow("\tLearn more! You lose!\n").red
+
+    if bot_mode
+      win_text = Rainbow("\tBot beat you! Bot win!\n").red
+      lose_text = Rainbow("\tCongratulation! Bot lose!\n").lime
+    end
 
     result ? win_text : lose_text
   end
 
   def right_answer_text(code)
-    prompt = Rainbow(' - The real answer is here...').color(:gold)
+    prompt = Rainbow(' ! The real answer is here...').gold
     half_row = guess_text(code)
     "\n#{prompt}\n\n#{half_row}\n#{half_row}"
   end
