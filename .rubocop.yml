@@ -14,5 +14,5 @@ AllCops:
 Style/FrozenStringLiteralComment:
   EnforcedStyle: never
 
-Metrics/AbcSize:
-  EnforcedStyle: never
+Metrics/MethodLength:
+  Max: 15
