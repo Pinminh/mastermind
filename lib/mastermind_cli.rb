@@ -5,9 +5,9 @@ require_relative 'mastermind_message'
 class MastermindCLI
   include MastermindMessage
 
-  CLR_CODE = %i[red green blue yellow cyan white
-                tomato orange magenta aqua lime violet].freeze
-  CLR_CHAR = %w[r g b y c w t o m a l v].freeze
+  CLR_CODE = %i[red green darkblue yellow cyan white
+                tomato orange magenta].freeze
+  CLR_CHAR = %w[r g b y c w t o m].freeze
   ROW_COLORS = 6
 
   def initialize(game = nil)
@@ -23,10 +23,7 @@ class MastermindCLI
   end
 
   def print_guide
-    clear_terminal
     puts guide_text(@game.row.width, @game.row.number_of_colors)
-    gets
-    clear_terminal
   end
 
   def cut_guess(guess)
@@ -34,6 +31,46 @@ class MastermindCLI
 
     raise 'invalid width' unless guess.length == @game.row.width
     raise 'invalid color' unless @game.row.accept_guess?(guess)
+  end
+
+  def ask_for_role
+    puts role_guide_text
+    response = ''
+    loop do
+      print input_role_prompt_text
+      response = gets.chomp.gsub(' ', '').downcase.slice(0, 3)
+      break if %w[y n].include?(response[0]) || %w[yes no].include?(response)
+    end
+
+    @game.bot.toggle_bot if %w[y yes].include?(response)
+    nil
+  end
+
+  def ask_for_code
+    print input_code_prompt_text
+
+    code = gets.chomp.gsub(' ', '').chars
+    cut_guess(code)
+    code
+  end
+
+  def process_role
+    ask_for_role
+    clear_terminal
+    return unless @game.bot.guesser?
+
+    puts colors_guide_text(@game.row.width, @game.row.number_of_colors)
+    puts input_guide_text
+
+    begin
+      code = ask_for_code
+    rescue RuntimeError => e
+      puts error_text(e, @game.row.width)
+      retry
+    else
+      @game.bot.receive_code(code)
+      clear_terminal
+    end
   end
 
   def ask_for_guess
@@ -57,12 +94,7 @@ class MastermindCLI
     @pegs_hist.clear
   end
 
-  def process_guess
-    guess = ask_for_guess
-  rescue RuntimeError => e
-    puts error_text(e, @game.row.width)
-    retry
-  else
+  def process_guess(guess)
     @game.row.put_guess(guess)
     @game.update_after_guess
 
@@ -70,28 +102,57 @@ class MastermindCLI
     @pegs_hist.push(interpret_pegs)
   end
 
+  def process_human_guess
+    guess = ask_for_guess
+  rescue RuntimeError => e
+    puts error_text(e, @game.row.width)
+    retry
+  else
+    process_guess(guess)
+  end
+
+  def process_bot_guess
+    sleep 1
+    process_guess(@game.bot.guess)
+    @game.bot.update_next_guess
+  end
+
+  def process_game
+    process_human_guess unless @game.bot.guesser?
+    process_bot_guess if @game.bot.guesser?
+  end
+
   def loop_play_round
     loop do
       print history_text(@guess_hist, @pegs_hist)
-      print colors_guide_text(@game.row.width, @game.row.number_of_colors)
+      puts colors_guide_text(@game.row.width, @game.row.number_of_colors)
       print input_guide_text
 
-      process_guess
+      process_game
 
       clear_terminal
+      $stdout.flush
       break if @game.round_end?
     end
   end
 
   def conclude_round
     puts "\n"
-    puts result_text(@game.win?)
+    puts result_text(@game.win?, @game.bot.guesser?)
     puts right_answer_text(@game.bot.code) unless @game.win?
     puts
   end
 
+  def process_configuration
+  end
+
   def play_once
+    process_configuration
+
+    clear_terminal
     print_guide
+    process_role
+
     loop_play_round
 
     print history_text(@guess_hist, @pegs_hist)

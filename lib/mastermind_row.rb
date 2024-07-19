@@ -1,7 +1,7 @@
 # Manage data interactions corresponding each guessing row
 class MastermindRow
-  MAX_WIDTH = 12
-  MAX_COLOR = 12
+  MAX_WIDTH = 6
+  MAX_COLOR = 9
 
   attr_reader :width, :number_of_colors
 

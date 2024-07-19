@@ -4,14 +4,14 @@ require_relative 'mastermind_bot'
 
 # Define underlying mechanics of the game
 class MastermindGame
-  MAX_TURNS = 16
+  MAX_TURNS = 12
 
   attr_reader :row, :bot, :max_turns, :played_turns, :player_score
 
   def initialize(width = 4, number_of_colors = 6, max_turns = 8)
     @row = MastermindRow.new(width, number_of_colors)
     @cli = MastermindCLI.new(self)
-    @bot = MastermindBot.new(@row)
+    @bot = MastermindBot.new(self)
 
     @pegs = { colored: 0, white: 0 }
 
@@ -58,35 +58,42 @@ class MastermindGame
     modify_pegs(0, 0)
   end
 
-  def update_colored_pegs(dummy_code)
-    @row.guess.each_with_index do |color, index|
-      next unless color == dummy_code[index]
+  def self.respond_colored_pegs(guess, code)
+    colored_pegs = 0
+    guess.each_with_index do |color, index|
+      next unless color == code[index]
 
-      @pegs[:colored] += 1
-      dummy_code[index] = nil
+      colored_pegs += 1
+      code[index] = nil
     end
+    colored_pegs
   end
 
-  def update_white_pegs(dummy_code)
-    @row.guess.each_with_index do |color, index|
-      next if dummy_code[index].nil?
+  def self.respond_white_pegs(guess, code)
+    white_pegs = 0
+    guess.each_with_index do |color, index|
+      next if code[index].nil?
 
-      found_index = dummy_code.find_index(color)
+      found_index = code.find_index(color)
       next unless found_index
 
-      @pegs[:white] += 1
-      dummy_code[found_index] = -1 # Make search for this element unavailable
+      white_pegs += 1
+      code[found_index] = -1 # Make search for this element unavailable
     end
+    white_pegs
+  end
+
+  def self.respond_pegs(guess, code)
+    dummy_code = code.clone
+    colored_pegs = respond_colored_pegs(guess, dummy_code)
+    white_pegs = respond_white_pegs(guess, dummy_code)
+    { colored: colored_pegs, white: white_pegs }
   end
 
   def update_pegs
     return false if @row.unfinished_guess?
 
-    reset_pegs
-    dummy_code = @bot.code
-
-    update_colored_pegs(dummy_code)
-    update_white_pegs(dummy_code)
+    @pegs = self.class.respond_pegs(@row.guess, @bot.code)
     true
   end
 
